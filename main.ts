@@ -28,7 +28,7 @@ const textDecoder = new TextDecoder()
 const socket = new WebSocket(
     "wss://" +
         Deno.env.get("SERVER_HOST") +
-        ":7531/connect?module=channelUtils&events=member_joined_channel&secret=" +
+        ":7531/connect?module=channelUtils&events=member_joined_channel,group_left,channel_left&secret=" +
         encodeURIComponent(Deno.env.get("CONNECTION_SECRET")!),
 )
 
@@ -62,17 +62,34 @@ socket.addEventListener("message", async (ev) => {
             data.split("event ").slice(1).join("event "),
         )
         console.log(eventData)
-        if (eventData.user == botUserId) {
-            const channelInfo = (
-                await (
-                    await fetch(
-                        "https://slack.com/api/conversations.info?channel=" +
-                            eventData.channel +
-                            "&include_num_members=true",
-                        { headers: { Authorization: "Bearer " + xoxb } },
-                    )
-                ).json()
-            ).channel
+        if (eventData.type == "member_joined_channel") {
+            if (eventData.user == botUserId) {
+                const channelInfo = (
+                    await (
+                        await fetch(
+                            "https://slack.com/api/conversations.info?channel=" +
+                                eventData.channel +
+                                "&include_num_members=true",
+                            { headers: { Authorization: "Bearer " + xoxb } },
+                        )
+                    ).json()
+                ).channel
+                await fetch("https://slack.com/api/chat.postMessage", {
+                    method: "POST",
+                    headers: {
+                        Authorization: "Bearer " + xoxb,
+                        "Content-Type": "application/json; charset=utf-8",
+                    },
+                    body: JSON.stringify({
+                        channel: "U091XKGS8SF",
+                        text: `Added to channel <#${eventData.channel}> (${eventData.channel}, ${channelInfo.name}) by <@${eventData.inviter}>`,
+                    }),
+                })
+            }
+        } else if (
+            eventData.type == "group_left" ||
+            eventData.type == "channel_left"
+        ) {
             await fetch("https://slack.com/api/chat.postMessage", {
                 method: "POST",
                 headers: {
@@ -81,7 +98,7 @@ socket.addEventListener("message", async (ev) => {
                 },
                 body: JSON.stringify({
                     channel: "U091XKGS8SF",
-                    text: `Added to channel <#${eventData.channel}> (${channelInfo.name}) by <@${eventData.inviter}>`,
+                    text: `Removed from channel <#${eventData.channel}> (${eventData.channel})${"actor_id" in eventData ? ` by <@${eventData.actor_id}>` : ""}`,
                 }),
             })
         }
