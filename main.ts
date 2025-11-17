@@ -40,14 +40,19 @@ let xoxb = ""
 let botUserId = ""
 
 socket.addEventListener("message", async (ev) => {
-    const encryptedData = await ev.data.arrayBuffer()
-    const data = textDecoder.decode(
-        await crypto.subtle.decrypt(
-            { name: "RSA-OAEP" },
-            keyPair.private,
-            encryptedData,
-        ),
-    )
+    let data = ""
+    if (typeof ev.data == "string") {
+        data = ev.data
+    } else {
+        const encryptedData = await ev.data.arrayBuffer()
+        data = textDecoder.decode(
+            await crypto.subtle.decrypt(
+                { name: "RSA-OAEP" },
+                keyPair.private,
+                encryptedData,
+            ),
+        )
+    }
     if (data.startsWith("xoxb-")) {
         xoxb = data
         const botData = await (
