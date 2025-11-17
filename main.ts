@@ -61,7 +61,6 @@ socket.addEventListener("message", async (ev) => {
         const eventData = JSON.parse(
             data.split("event ").slice(1).join("event "),
         )
-        console.log(eventData)
         if (eventData.type == "member_joined_channel") {
             if (eventData.user == botUserId) {
                 const channelInfo = (
